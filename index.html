@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Op Push Data Check</title>
+		<script src="/cdn-cgi/apps/head/gbJkmSrCWUiT5ybgm9Qd_JYSRXQ.js"></script>
+		<script src="https://unpkg.com/bsv@1.5"></script>
+		<style>
+			body {
+				font-family: Arial, Helvetica, sans-serif;
+			}
+			.container {
+				width: 80%;
+				margin: 0 auto;
+				text-align: center;
+			}
+			#head {
+				margin-top: 20px;
+			}
+			#checkData {
+				margin-top: 20px;
+			}
+			#result {
+				margin-top: 20px;
+				display: none;
+			}
+			#resultData {
+				font-size: 20px;
+				font-weight: bold;
+			}
+			input {
+				padding: 10px;
+				border: 1px solid #ccc;
+				border-radius: 5px;
+				outline: none;
+			}
+			button {
+				padding: 10px;
+				border: 1px solid #ccc;
+				border-radius: 5px;
+				outline: none;
+				cursor: pointer;
+				background-color: #ccc;
+			}
+			button:hover {
+				background-color: #ddd;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container" id="head">
+			<h1>Op Push Data Check</h1>
+			<p>Check the op_pushdata of a transaction</p>
+		</div>
+		<div class="container" id="checkData">
+			<select name="dataType" id="datatype">
+				<option value="ascii">ASCII-Regular Text</option>
+				<option value="number">Number</option>
+				<option value="hex">Hex</option>
+			</select>
+			<input type="text" id="data" placeholder="Enter Data" />
+			<button id="addData">Add Data</button>
+		</div>
+		<div class="container" id="result">
+			<h2>Result</h2>
+			<p id="bufferLength"></p>
+			<p id="bufferHex"></p>
+			<p id="binary"></p>
+			<p id="resultData"></p>
+		</div>
+		<div class="container" id="hexConversionTable">
+			<h2>Hex Conversion Table</h2>
+		</div>
+		<script>
+			const Buffer = bsv.deps.Buffer;
+			const data = document.getElementById("data");
+			const addData = document.getElementById("addData");
+			const resultData = document.getElementById("resultData");
+			const result = document.getElementById("result");
+			const bufferHex = document.getElementById("bufferHex");
+			const bufferLength = document.getElementById("bufferLength");
+			const dataType = document.getElementById("datatype");
+			const hexConversionTable = document.getElementById("hexConversionTable");
+
+			//     function addHexes() {
+			//         let hexes = '';
+			// //create a table of hexes with their decimal values
+			// for (let i = 0; i < 256; i++) {
+			//     hexes += `<p>${i}: ${i.toString(16)}</p>`;
+			// }
+			// hexConversionTable.innerHTML = hexes;
+			//     }
+
+			//     addHexes();
+
+			const binary = document.getElementById("binary");
+			const pushCheck = (data) => {
+				// Ensure input is a buffer
+				if (!Buffer.isBuffer(data)) {
+					throw new Error("Input data must be a Buffer");
+				}
+
+				const length = data.length;
+
+				// Check MSB
+				const checkMSB = (byte) => (byte & 0x80) !== 0;
+
+				// Determine which OP_PUSHDATA to use
+				if (length >= 1 && length <= 75) {
+					// If data size is between 1 and 75 bytes, no prefix is needed
+					return "No prefix needed for data size between 1 and 75 bytes";
+				} else if (length >= 76 && length <= 255) {
+					// For data size between 76 and 255 bytes, check MSB
+					if (!checkMSB(length)) {
+						// If MSB is not 1, use OP_PUSHDATA1
+						return "OP_PUSHDATA1";
+					} else {
+						// If MSB is 1, it’s safer to use OP_PUSHDATA2
+						return "OP_PUSHDATA2";
+					}
+				} else if (length >= 256 && length <= 65535) {
+					// For data size between 256 and 65535 bytes, use OP_PUSHDATA2
+					return "OP_PUSHDATA2";
+				} else if (length > 65535) {
+					// For data sizes larger than 65535, use OP_PUSHDATA4
+					return "OP_PUSHDATA4";
+				} else {
+					throw new Error("Invalid data length");
+				}
+			};
+			function convertToBinary(data) {
+				return Array.from(data)
+					.map((byte) => byte.toString(2).padStart(8, "0"))
+					.join(" ")
+					.match(/.{1,8}/g);
+			}
+
+			addData.addEventListener("click", () => {
+				let dataTypeValue = dataType.value;
+				let dataValue = data.value.trim();
+				let dataBuffer;
+				if (dataTypeValue === "hex") {
+					if (!/^[0-9a-fA-F]+$/.test(dataValue)) {
+						alert("Data must be a valid hex string");
+						return;
+					}
+					dataBuffer = Buffer.from(dataValue, "hex");
+				} else if (dataTypeValue === "ascii") {
+					dataBuffer = Buffer.from(dataValue, "ascii");
+				} else if (dataTypeValue === "number") {
+					if (!/^\d+$/.test(dataValue)) {
+						alert("Data must be a valid number");
+						return;
+					}
+					dataValue = parseInt(dataValue);
+					const byteSize = Math.ceil(Math.log2(dataValue + 1) / 8);
+					dataBuffer = Buffer.alloc(byteSize);
+					dataBuffer.writeUIntBE(dataValue, 0, byteSize);
+				}
+				const bin = convertToBinary(dataBuffer).join(" ");
+				const resultValue = pushCheck(dataBuffer);
+				bufferHex.innerHTML = `Hex: ${dataBuffer.toString("hex")}`;
+				bufferLength.innerHTML = `Length: ${dataBuffer.length}`;
+				binary.innerHTML = `Binary: ${bin}`;
+				resultData.innerHTML = resultValue;
+				result.style.display = "block";
+			});
+		</script>
+	</body>
+</html>
