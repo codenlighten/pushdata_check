@@ -67,6 +67,7 @@
 			<p id="bufferLength"></p>
 			<p id="bufferHex"></p>
 			<p id="binary"></p>
+			<p id="littleEndian"></p>
 			<p id="resultData"></p>
 		</div>
 		<div class="container" id="hexConversionTable">
@@ -82,7 +83,7 @@
 			const bufferLength = document.getElementById("bufferLength");
 			const dataType = document.getElementById("datatype");
 			const hexConversionTable = document.getElementById("hexConversionTable");
-
+			const littleEndian = document.getElementById("littleEndian");
 			//     function addHexes() {
 			//         let hexes = '';
 			// //create a table of hexes with their decimal values
@@ -93,6 +94,12 @@
 			//     }
 
 			//     addHexes();
+			const convertToLittleEndian = (data) => {
+				return Array.from(data)
+					.map((byte) => byte.toString(2).padStart(8, "0"))
+					.join(" ")
+					.match(/.{1,8}/g);
+			};
 
 			const binary = document.getElementById("binary");
 			const pushCheck = (data) => {
@@ -163,7 +170,11 @@
 				bufferHex.innerHTML = `Hex: ${dataBuffer.toString("hex")}`;
 				bufferLength.innerHTML = `Length: ${dataBuffer.length}`;
 				binary.innerHTML = `Binary: ${bin}`;
+				// littleEndian.innerHTML = `Little Endian: ${convertToLittleEndian(
+				// 	dataBuffer
+				// ).join(" ")}`;
 				resultData.innerHTML = resultValue;
+
 				result.style.display = "block";
 			});
 		</script>
