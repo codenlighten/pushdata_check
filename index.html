@@ -70,8 +70,19 @@
 			<p id="littleEndian"></p>
 			<p id="resultData"></p>
 		</div>
-		<div class="container" id="hexConversionTable">
-			<h2>Hex Conversion Table</h2>
+		<div class="container" id="endianConverter">
+			<h2>Endian Converter</h2>
+			<p id="endianStatus">Current Endian Status:</p>
+			<label for="number">Number</label>
+			<input type="number" id="number" />
+			<p id="resultNumber"></p>
+			<label for="hex">Hex</label>
+			<input type="text" id="hex" />
+			<p id="resultHex"></p>
+			<label for="binary">Binary</label>
+			<input type="text" id="bin" />
+			<p id="resultBinary"></p>
+			<button id="convertEndian">Convert Endian</button>
 		</div>
 		<script>
 			const Buffer = bsv.deps.Buffer;
@@ -82,18 +93,26 @@
 			const bufferHex = document.getElementById("bufferHex");
 			const bufferLength = document.getElementById("bufferLength");
 			const dataType = document.getElementById("datatype");
-			const hexConversionTable = document.getElementById("hexConversionTable");
 			const littleEndian = document.getElementById("littleEndian");
-			//     function addHexes() {
-			//         let hexes = '';
-			// //create a table of hexes with their decimal values
-			// for (let i = 0; i < 256; i++) {
-			//     hexes += `<p>${i}: ${i.toString(16)}</p>`;
-			// }
-			// hexConversionTable.innerHTML = hexes;
-			//     }
+			const endianStatus = document.getElementById("endianStatus");
+			const addNumber = document.getElementById("addNumber");
+			const number = document.getElementById("number");
 
-			//     addHexes();
+			const endianConverter = document.getElementById("convertEndian");
+			const resultEndian = document.getElementById("resultEndian");
+			const hex = document.getElementById("hex");
+			const resultHex = document.getElementById("resultHex");
+			const resultBinary = document.getElementById("resultBinary");
+			const binary = document.getElementById("binary");
+			const bin = document.getElementById("bin");
+			const convertEndian = (data) => {
+				return Array.from(data)
+					.map((byte) => byte.toString(2).padStart(8, "0"))
+					.join(" ")
+					.match(/.{1,8}/g);
+			};
+			//add event listeners to the inputs and convert in real time
+
 			const convertToLittleEndian = (data) => {
 				return Array.from(data)
 					.map((byte) => byte.toString(2).padStart(8, "0"))
@@ -101,7 +120,21 @@
 					.match(/.{1,8}/g);
 			};
 
-			const binary = document.getElementById("binary");
+			endianConverter.addEventListener("click", () => {
+				let numberValue = number.value.trim();
+				if (!/^\d+$/.test(numberValue)) {
+					alert("Data must be a valid number");
+					return;
+				}
+				numberValue = parseInt(numberValue);
+				//reverse the numbervalue bytes
+				const byteSize = Math.ceil(Math.log2(numberValue + 1) / 8);
+				const dataBuffer = Buffer.alloc(byteSize);
+				dataBuffer.writeUIntBE(numberValue, 0, byteSize);
+				const result = convertToLittleEndian(dataBuffer).reverse().join(" ");
+				resultEndian.innerHTML = result;
+			});
+
 			const pushCheck = (data) => {
 				// Ensure input is a buffer
 				if (!Buffer.isBuffer(data)) {
@@ -176,6 +209,49 @@
 				resultData.innerHTML = resultValue;
 
 				result.style.display = "block";
+			});
+			//addevent listener to number input changes and console log the result
+			//add event listener to hex input changes and console log the result
+			//add event listener to binary input changes and console log the result
+
+			number.addEventListener("input", () => {
+				let numberValue = number.value.trim();
+				if (!/^\d+$/.test(numberValue)) {
+					alert("Data must be a valid number");
+					return;
+				}
+				numberValue = parseInt(numberValue);
+				//reverse the numbervalue bytes
+				const byteSize = Math.ceil(Math.log2(numberValue + 1) / 8);
+				const dataBuffer = Buffer.alloc(byteSize);
+				dataBuffer.writeUIntBE(numberValue, 0, byteSize);
+				bin.value = convertToBinary(dataBuffer).join("");
+				hex.value = dataBuffer.toString("hex");
+			});
+
+			hex.addEventListener("input", () => {
+				let hexValue = hex.value.trim();
+				if (!/^[0-9a-fA-F]+$/.test(hexValue)) {
+					alert("Data must be a valid hex string");
+					return;
+				}
+				const dataBuffer = Buffer.from(hexValue, "hex");
+				bin.value = convertToBinary(dataBuffer).join("");
+				number.value = dataBuffer.readUIntBE(0, dataBuffer.length);
+			});
+
+			bin.addEventListener("input", () => {
+				let binaryValue = bin.value.trim();
+				if (!/^[0-1\s]+$/.test(binaryValue)) {
+					alert("Data must be a valid binary string");
+					return;
+				}
+				const dataBuffer = Buffer.from(
+					binaryValue.replace(/\s/g, ""),
+					"binary"
+				);
+				hex.value = dataBuffer.toString("hex");
+				number.value = dataBuffer.readUIntBE(0, dataBuffer.length);
 			});
 		</script>
 	</body>
