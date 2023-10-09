@@ -46,6 +46,17 @@
 			button:hover {
 				background-color: #ddd;
 			}
+			#endianConverter {
+				margin-top: 20px;
+			}
+			#endianStatus {
+				font-size: 20px;
+				font-weight: bold;
+			}
+			#resultEndian {
+				font-size: 20px;
+				font-weight: bold;
+			}
 		</style>
 	</head>
 	<body>
@@ -75,15 +86,17 @@
 			<p id="endianStatus">Current Endian Status:</p>
 			<label for="number">Number</label>
 			<input type="number" id="number" />
-			<p id="resultNumber"></p>
+			<!-- <p id="resultNumber"></p> -->
 			<label for="hex">Hex</label>
 			<input type="text" id="hex" />
-			<p id="resultHex"></p>
+			<!-- <p id="resultHex"></p> -->
 			<label for="binary">Binary</label>
 			<input type="text" id="bin" />
-			<p id="resultBinary"></p>
+			<!-- <p id="resultBinary"></p> -->
 			<button id="convertEndian">Convert Endian</button>
+			<p id="endianResult"></p>
 		</div>
+
 		<script>
 			const Buffer = bsv.deps.Buffer;
 			const data = document.getElementById("data");
@@ -99,7 +112,7 @@
 			const number = document.getElementById("number");
 
 			const endianConverter = document.getElementById("convertEndian");
-			const resultEndian = document.getElementById("resultEndian");
+			const resultEndian = document.getElementById("endianResult");
 			const hex = document.getElementById("hex");
 			const resultHex = document.getElementById("resultHex");
 			const resultBinary = document.getElementById("resultBinary");
@@ -113,11 +126,15 @@
 			};
 			//add event listeners to the inputs and convert in real time
 
-			const convertToLittleEndian = (data) => {
-				return Array.from(data)
-					.map((byte) => byte.toString(2).padStart(8, "0"))
-					.join(" ")
-					.match(/.{1,8}/g);
+			const convertToLittleEndian = () => {
+				//convert all inputs to little endian
+				const numberValue = parseInt(number.value);
+				const hexValue = hex.value.trim();
+				const binaryValue = bin.value.trim();
+				const dataBuffer = Buffer.alloc(4);
+				dataBuffer.writeUIntBE(numberValue, 0, 4);
+				const result = convertEndian(dataBuffer);
+				return result;
 			};
 
 			endianConverter.addEventListener("click", () => {
