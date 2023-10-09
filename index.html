@@ -86,13 +86,10 @@
 			<p id="endianStatus">Current Endian Status:</p>
 			<label for="number">Number</label>
 			<input type="number" id="number" />
-			<!-- <p id="resultNumber"></p> -->
 			<label for="hex">Hex</label>
 			<input type="text" id="hex" />
-			<!-- <p id="resultHex"></p> -->
 			<label for="binary">Binary</label>
 			<input type="text" id="bin" />
-			<!-- <p id="resultBinary"></p> -->
 			<button id="convertEndian">Convert Endian</button>
 			<p id="endianResult"></p>
 		</div>
@@ -126,18 +123,61 @@
 			};
 			//add event listeners to the inputs and convert in real time
 
-			const convertToLittleEndian = () => {
-				//convert all inputs to little endian
-				const numberValue = parseInt(number.value);
-				const hexValue = hex.value.trim();
-				const binaryValue = bin.value.trim();
-				const dataBuffer = Buffer.alloc(4);
-				dataBuffer.writeUIntBE(numberValue, 0, 4);
-				const result = convertEndian(dataBuffer);
-				return result;
+			const endianConverter = document.getElementById("convertEndian");
+			const resultEndian = document.getElementById("endianResult");
+			const number = document.getElementById("number");
+			const hex = document.getElementById("hex");
+			const bin = document.getElementById("bin");
+
+			const convertToLittleEndian = (buffer) => {
+				const byteArray = Array.from(buffer);
+				return byteArray.reverse();
 			};
 
 			endianConverter.addEventListener("click", () => {
+				const numberValue = parseInt(number.value);
+				const hexValue = hex.value.trim();
+				const binaryValue = bin.value.trim();
+
+				if (numberValue) {
+					const bufferFromNumber = new Uint8Array([numberValue]).buffer;
+					const littleEndianNumberBuffer = convertToLittleEndian(
+						new Uint8Array(bufferFromNumber)
+					);
+					const littleEndianNumber = new DataView(
+						littleEndianNumberBuffer.buffer
+					).getUint8(0);
+					resultEndian.innerHTML = `Little Endian (Number): ${littleEndianNumber}`;
+				}
+
+				if (/^[0-9a-fA-F]+$/.test(hexValue)) {
+					const bufferFromHex = new Uint8Array(
+						hexValue.match(/.{1,2}/g).map((byte) => parseInt(byte, 16))
+					);
+					const littleEndianHexBuffer = convertToLittleEndian(bufferFromHex);
+					const littleEndianHex = Array.from(littleEndianHexBuffer)
+						.map((byte) => byte.toString(16).padStart(2, "0"))
+						.join("");
+					resultEndian.innerHTML += `<br>Little Endian (Hex): ${littleEndianHex}`;
+				}
+
+				if (/^[01\s]+$/.test(binaryValue)) {
+					const bufferFromBinary = new Uint8Array(
+						binaryValue.split("").map((bit) => parseInt(bit, 10))
+					);
+					const littleEndianBinaryBuffer =
+						convertToLittleEndian(bufferFromBinary);
+					const littleEndianBinary = Array.from(littleEndianBinaryBuffer)
+						.map((byte) => byte.toString(2).padStart(8, "0"))
+						.join("");
+					resultEndian.innerHTML += `<br>Little Endian (Binary): ${littleEndianBinary}`;
+				}
+			});
+			//addevent listener to number input changes and console log the result
+			//add event listener to hex input changes and console log the result
+			//add event listener to binary input changes and console log the result
+
+			number.addEventListener("input", () => {
 				let numberValue = number.value.trim();
 				if (!/^\d+$/.test(numberValue)) {
 					alert("Data must be a valid number");
@@ -148,8 +188,33 @@
 				const byteSize = Math.ceil(Math.log2(numberValue + 1) / 8);
 				const dataBuffer = Buffer.alloc(byteSize);
 				dataBuffer.writeUIntBE(numberValue, 0, byteSize);
-				const result = convertToLittleEndian(dataBuffer).reverse().join(" ");
-				resultEndian.innerHTML = result;
+				bin.value = convertToBinary(dataBuffer).join("");
+				hex.value = dataBuffer.toString("hex");
+			});
+
+			hex.addEventListener("input", () => {
+				let hexValue = hex.value.trim();
+				if (!/^[0-9a-fA-F]+$/.test(hexValue)) {
+					alert("Data must be a valid hex string");
+					return;
+				}
+				const dataBuffer = Buffer.from(hexValue, "hex");
+				bin.value = convertToBinary(dataBuffer).join("");
+				number.value = dataBuffer.readUIntBE(0, dataBuffer.length);
+			});
+
+			bin.addEventListener("input", () => {
+				let binaryValue = bin.value.trim();
+				if (!/^[0-1\s]+$/.test(binaryValue)) {
+					alert("Data must be a valid binary string");
+					return;
+				}
+				const dataBuffer = Buffer.from(
+					binaryValue.replace(/\s/g, ""),
+					"binary"
+				);
+				hex.value = dataBuffer.toString("hex");
+				number.value = dataBuffer.readUIntBE(0, dataBuffer.length);
 			});
 
 			const pushCheck = (data) => {
@@ -226,49 +291,6 @@
 				resultData.innerHTML = resultValue;
 
 				result.style.display = "block";
-			});
-			//addevent listener to number input changes and console log the result
-			//add event listener to hex input changes and console log the result
-			//add event listener to binary input changes and console log the result
-
-			number.addEventListener("input", () => {
-				let numberValue = number.value.trim();
-				if (!/^\d+$/.test(numberValue)) {
-					alert("Data must be a valid number");
-					return;
-				}
-				numberValue = parseInt(numberValue);
-				//reverse the numbervalue bytes
-				const byteSize = Math.ceil(Math.log2(numberValue + 1) / 8);
-				const dataBuffer = Buffer.alloc(byteSize);
-				dataBuffer.writeUIntBE(numberValue, 0, byteSize);
-				bin.value = convertToBinary(dataBuffer).join("");
-				hex.value = dataBuffer.toString("hex");
-			});
-
-			hex.addEventListener("input", () => {
-				let hexValue = hex.value.trim();
-				if (!/^[0-9a-fA-F]+$/.test(hexValue)) {
-					alert("Data must be a valid hex string");
-					return;
-				}
-				const dataBuffer = Buffer.from(hexValue, "hex");
-				bin.value = convertToBinary(dataBuffer).join("");
-				number.value = dataBuffer.readUIntBE(0, dataBuffer.length);
-			});
-
-			bin.addEventListener("input", () => {
-				let binaryValue = bin.value.trim();
-				if (!/^[0-1\s]+$/.test(binaryValue)) {
-					alert("Data must be a valid binary string");
-					return;
-				}
-				const dataBuffer = Buffer.from(
-					binaryValue.replace(/\s/g, ""),
-					"binary"
-				);
-				hex.value = dataBuffer.toString("hex");
-				number.value = dataBuffer.readUIntBE(0, dataBuffer.length);
 			});
 		</script>
 	</body>
