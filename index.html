@@ -96,6 +96,13 @@
 
 		<script>
 			const Buffer = bsv.deps.Buffer;
+			const readLE = (buffer) => {
+				let result = 0n;
+				for (let i = 0; i < buffer.length; i++) {
+					result += BigInt(buffer[i]) * 256n ** BigInt(i);
+				}
+				return result;
+			};
 			const data = document.getElementById("data");
 			const addData = document.getElementById("addData");
 			const resultData = document.getElementById("resultData");
@@ -106,15 +113,10 @@
 			const littleEndian = document.getElementById("littleEndian");
 			const endianStatus = document.getElementById("endianStatus");
 			const addNumber = document.getElementById("addNumber");
-			const number = document.getElementById("number");
 
-			const endianConverter = document.getElementById("convertEndian");
-			const resultEndian = document.getElementById("endianResult");
-			const hex = document.getElementById("hex");
 			const resultHex = document.getElementById("resultHex");
 			const resultBinary = document.getElementById("resultBinary");
 			const binary = document.getElementById("binary");
-			const bin = document.getElementById("bin");
 			const convertEndian = (data) => {
 				return Array.from(data)
 					.map((byte) => byte.toString(2).padStart(8, "0"))
@@ -140,37 +142,24 @@
 				const binaryValue = bin.value.trim();
 
 				if (numberValue) {
-					const bufferFromNumber = new Uint8Array([numberValue]).buffer;
-					const littleEndianNumberBuffer = convertToLittleEndian(
-						new Uint8Array(bufferFromNumber)
+					const dataBuffer = Buffer.alloc(4);
+					dataBuffer.writeUInt32LE(numberValue, 0);
+					hex.value = dataBuffer.toString("hex");
+					bin.value = convertEndian(dataBuffer).join("");
+				} else if (hexValue) {
+					const dataBuffer = Buffer.from(hexValue, "hex");
+					number.value = readLE(dataBuffer);
+					bin.value = convertEndian(dataBuffer).join("");
+				} else if (binaryValue) {
+					const dataBuffer = Buffer.from(
+						binaryValue.replace(/\s/g, ""),
+						"binary"
 					);
-					const littleEndianNumber = new DataView(
-						littleEndianNumberBuffer.buffer
-					).getUint8(0);
-					resultEndian.innerHTML = `Little Endian (Number): ${littleEndianNumber}`;
-				}
-
-				if (/^[0-9a-fA-F]+$/.test(hexValue)) {
-					const bufferFromHex = new Uint8Array(
-						hexValue.match(/.{1,2}/g).map((byte) => parseInt(byte, 16))
-					);
-					const littleEndianHexBuffer = convertToLittleEndian(bufferFromHex);
-					const littleEndianHex = Array.from(littleEndianHexBuffer)
-						.map((byte) => byte.toString(16).padStart(2, "0"))
-						.join("");
-					resultEndian.innerHTML += `<br>Little Endian (Hex): ${littleEndianHex}`;
-				}
-
-				if (/^[01\s]+$/.test(binaryValue)) {
-					const bufferFromBinary = new Uint8Array(
-						binaryValue.split("").map((bit) => parseInt(bit, 10))
-					);
-					const littleEndianBinaryBuffer =
-						convertToLittleEndian(bufferFromBinary);
-					const littleEndianBinary = Array.from(littleEndianBinaryBuffer)
-						.map((byte) => byte.toString(2).padStart(8, "0"))
-						.join("");
-					resultEndian.innerHTML += `<br>Little Endian (Binary): ${littleEndianBinary}`;
+					number.value = readLE(dataBuffer);
+					hex.value = dataBuffer.toString("hex");
+				} else {
+					alert("Please enter a value");
+					return;
 				}
 			});
 			//addevent listener to number input changes and console log the result
